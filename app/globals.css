@@ -1,0 +1,75 @@
+@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Inter:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+:root {
+  --bg: #f5f0e8;
+  --surface: #ffffff;
+  --surface-2: #eee7d9;
+  --text: #3a3d3a;
+  --text-dim: #6b6f6b;
+  --accent: #8ba888;
+  --accent-ink: #ffffff;
+  --accent-soft: #e3ebe1;
+  --secondary: #6b8ca3;
+  --secondary-soft: #e5edf1;
+  --danger: #c17a6b;
+  --border: #e2dccd;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-text: var(--text);
+  --color-text-dim: var(--text-dim);
+  --color-accent: var(--accent);
+  --color-accent-ink: var(--accent-ink);
+  --color-accent-soft: var(--accent-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-soft: var(--secondary-soft);
+  --color-danger: var(--danger);
+  --color-border: var(--border);
+  --font-display: "Quicksand", sans-serif;
+  --font-sans: "Inter", sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+}
+
+h1, h2, h3, .font-display {
+  font-family: var(--font-display);
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.btn-accent {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: 12px;
+  padding: 10px 18px;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.btn-accent:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px -4px rgba(139, 168, 136, 0.5);
+}
+
+.input-soft {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  color: var(--text);
+}
+.input-soft:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
