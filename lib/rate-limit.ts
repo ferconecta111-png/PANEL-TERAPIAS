@@ -2,28 +2,36 @@ import { NextResponse } from "next/server";
 
 /**
  * Rate limiting en memoria, por instancia — igual que en vsl-platform.
- * "track" es el unico endpoint publico de este proyecto por ahora.
+ * Un límite distinto por scope: "track" es analítica de bajo riesgo (60/min);
+ * "bold-link" crea links de pago reales contra la API de Bold, así que va
+ * mucho más restringido (5/min) para que nadie lo use para saturar la cuenta.
  */
 
 const WINDOW_MS = 60_000;
-const LIMITE_TRACK = 60;
+const LIMITES: Record<RateLimitScope, number> = {
+  track: 60,
+  "bold-link": 5,
+};
 const MAX_BUCKETS = 10_000;
 
 const buckets = new Map<string, readonly number[]>();
+
+export type RateLimitScope = "track" | "bold-link";
 
 export interface RateLimitResult {
   allowed: boolean;
   retryAfterSeconds: number;
 }
 
-export function checkRateLimit(scope: "track", ip: string): RateLimitResult {
+export function checkRateLimit(scope: RateLimitScope, ip: string): RateLimitResult {
   const now = Date.now();
   const key = `${scope}:${ip}`;
+  const limite = LIMITES[scope];
 
   const previous = buckets.get(key) ?? [];
   const fresh = previous.filter(ts => now - ts < WINDOW_MS);
 
-  if (fresh.length >= LIMITE_TRACK) {
+  if (fresh.length >= limite) {
     buckets.set(key, fresh);
     const oldest = fresh[0];
     const retryMs = WINDOW_MS - (now - oldest);

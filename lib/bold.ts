@@ -20,6 +20,8 @@ export interface CrearLinkInput {
   moneda: "COP" | "USD";
   descripcion: string;
   referencia: string; // max 60 caracteres alfanumericos/guiones - id corto de solicitudes_pago
+  /** A dónde redirige Bold tras el pago (ej. página de gracias). Opcional. */
+  callbackUrl?: string;
 }
 
 export interface BoldLinkResult {
@@ -41,6 +43,7 @@ export async function crearLinkDePago(input: CrearLinkInput): Promise<BoldLinkRe
       amount: { currency: input.moneda, total_amount: input.montoUnidades, tip_amount: 0 },
       description: input.descripcion,
       reference: input.referencia,
+      ...(input.callbackUrl ? { callback_url: input.callbackUrl } : {}),
     }),
   });
 
