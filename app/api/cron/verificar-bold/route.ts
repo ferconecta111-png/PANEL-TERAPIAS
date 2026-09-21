@@ -1,40 +1,24 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { enviarAlerta } from "@/lib/alertas";
 
 /**
- * Cron (cada 15 min, ver vercel.json) — revisa que la llave de identidad de
- * Bold de Elizabeth siga siendo válida. Bold la rotó sin aviso una vez
+ * Cron diario (ver vercel.json — Vercel Hobby no admite crons más
+ * frecuentes que 1/día) — revisa que la llave de identidad de Bold de
+ * Elizabeth siga siendo válida. Bold la rotó sin aviso una vez
  * (21-sep-2026) y rompió en silencio la generación de links en su sitio
  * hasta que se notó a mano. Avisa por ntfy.sh SOLO en el cambio de estado
  * (sana->rota o rota->sana), nunca en cada chequeo — para no saturar de
  * notificaciones repetidas mientras sigue rota.
+ *
+ * Este chequeo proactivo es el respaldo de baja frecuencia — el aviso
+ * rápido de verdad, en tiempo real, sale de /api/public/bold-link mismo
+ * cuando le falla a un visitante real (ver avisarConDebounce en lib/alertas.ts).
  */
 export const runtime = "nodejs";
 
 const ID_SALUD = "bold_identity_key_elizabeth";
-
-async function avisar(mensaje: string, prioridad: "default" | "urgent"): Promise<void> {
-  const topic = process.env.NTFY_TOPIC_ALERTAS;
-  if (!topic) return;
-  try {
-    await fetch(`https://ntfy.sh/${topic}`, {
-      method: "POST",
-      headers: { Title: "Panel Terapeutas", Priority: priorityHeader(prioridad) },
-      body: mensaje,
-    });
-  } catch {
-    // Si ntfy falla, no hay más a donde avisar desde aquí — se pierde este
-    // aviso puntual, pero el próximo chequeo (15 min) lo vuelve a intentar
-    // si el estado sigue roto (los reintentos de "sigue roto" no avisan,
-    // solo el cambio de estado, así que si este intento falla justo cuando
-    // pasó de sana a rota, el aviso se pierde hasta el siguiente cambio real).
-  }
-}
-
-function priorityHeader(p: "default" | "urgent"): string {
-  return p === "urgent" ? "urgent" : "default";
-}
 
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
@@ -77,9 +61,9 @@ export async function GET(req: NextRequest) {
 
   if (cambioDeEstado) {
     if (ok) {
-      await avisar("✅ La llave de Bold de Elizabeth volvió a funcionar. Los links de pago ya generan bien.", "default");
+      await enviarAlerta("✅ La llave de Bold de Elizabeth volvió a funcionar. Los links de pago ya generan bien.", "default");
     } else {
-      await avisar(`⚠️ La llave de Bold de Elizabeth dejó de funcionar: ${detalle} Los botones de pago del sitio se van a caer al link de respaldo (puede estar agotado) hasta que se arregle.`, "urgent");
+      await enviarAlerta(`⚠️ La llave de Bold de Elizabeth dejó de funcionar: ${detalle} Los botones de pago del sitio se van a caer al link de respaldo (puede estar agotado) hasta que se arregle.`, "urgent");
     }
   }
 
