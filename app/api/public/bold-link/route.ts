@@ -27,23 +27,29 @@ interface ProductoPublico {
 // Catálogo fijo v1 — cuando Elizabeth (y las demás) tengan su fila real en
 // `terapeutas` con precios/identity key propios, esto se reemplaza por una
 // consulta a la tabla. Por ahora, hardcoded para no bloquear el fix urgente
-// del link agotándose en cada compra.
-const CATALOGO: Record<string, ProductoPublico> = {
-  eli_individual: {
-    montoUnidades: 75,
-    moneda: "USD",
-    descripcion: "Sesion individual de terapia - Elizabet Garcia Duque",
-    identityKey: "nuDKH7zvVKUjwzq_Hk-5INcMltwBQFCGyQPDGsAfzsU",
-    callbackUrl: "https://psicologaelizabetgarciad.com/gracias.html",
-  },
-  eli_paquete_x3: {
-    montoUnidades: 203,
-    moneda: "USD",
-    descripcion: "Paquete de 3 sesiones de terapia - Elizabet Garcia Duque",
-    identityKey: "nuDKH7zvVKUjwzq_Hk-5INcMltwBQFCGyQPDGsAfzsU",
-    callbackUrl: "https://psicologaelizabetgarciad.com/gracias.html",
-  },
-};
+// del link agotándose en cada compra. La llave sale de env (no del código):
+// Bold la rota de vez en cuando (pasó en vivo el 21-sep-2026, rompiendo la
+// llave vieja sin aviso) y así se actualiza sin tocar código ni redeploy de
+// más archivos.
+function catalogo(): Record<string, ProductoPublico> {
+  const identityKey = process.env.BOLD_IDENTITY_KEY_ELIZABETH ?? "";
+  return {
+    eli_individual: {
+      montoUnidades: 75,
+      moneda: "USD",
+      descripcion: "Sesion individual de terapia - Elizabet Garcia Duque",
+      identityKey,
+      callbackUrl: "https://psicologaelizabetgarciad.com/gracias.html",
+    },
+    eli_paquete_x3: {
+      montoUnidades: 203,
+      moneda: "USD",
+      descripcion: "Paquete de 3 sesiones de terapia - Elizabet Garcia Duque",
+      identityKey,
+      callbackUrl: "https://psicologaelizabetgarciad.com/gracias.html",
+    },
+  };
+}
 
 function conCors(res: NextResponse): NextResponse {
   res.headers.set("Access-Control-Allow-Origin", "*");
@@ -69,8 +75,12 @@ export async function POST(req: NextRequest) {
   }
 
   const producto = (body as { producto?: unknown })?.producto;
-  const config = typeof producto === "string" ? CATALOGO[producto] : undefined;
+  const config = typeof producto === "string" ? catalogo()[producto] : undefined;
   if (!config) return conCors(NextResponse.json({ error: "Producto desconocido" }, { status: 422 }));
+  if (!config.identityKey) {
+    console.error("[bold-link] falta_BOLD_IDENTITY_KEY_ELIZABETH");
+    return conCors(NextResponse.json({ error: "Falta configurar la llave de Bold." }, { status: 500 }));
+  }
 
   const referencia = `pub_${producto}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
