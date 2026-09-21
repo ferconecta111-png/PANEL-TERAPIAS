@@ -27,11 +27,19 @@
           etiqueta: etiqueta || null,
           pagina: location.pathname,
         });
-        if (navigator.sendBeacon) {
-          navigator.sendBeacon(ENDPOINT, new Blob([payload], { type: "application/json" }));
-        } else {
-          fetch(ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body: payload, keepalive: true });
-        }
+        // OJO (hallazgo real, 21-sep-2026): sendBeacon manda la petición en
+        // modo "con credenciales", lo cual choca con Access-Control-Allow-Origin: *
+        // del servidor (la especificación no permite combinar las dos cosas) —
+        // el navegador la bloqueaba en silencio, sin ningún evento llegando
+        // nunca. fetch con credentials:"omit" evita el choque y, con
+        // keepalive:true, sigue sobreviviendo al cierre/navegación de la página.
+        fetch(ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: payload,
+          keepalive: true,
+          credentials: "omit",
+        }).catch(function () {});
       } catch (e) { /* nunca romper la pagina por esto */ }
     }
 
