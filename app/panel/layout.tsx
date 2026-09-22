@@ -10,6 +10,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     { href: "/panel/terapeutas", label: "Terapeutas" },
     { href: "/panel/pacientes", label: "Pacientes" },
     { href: "/panel/agenda", label: "Agenda" },
+    { href: "/panel/analitica", label: "Analítica" },
     { href: "/panel/pagos", label: "Pagos" },
   ];
   const linksTerapeuta = [
