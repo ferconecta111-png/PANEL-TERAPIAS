@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { crearLinkDePago } from "@/lib/bold";
 import { checkRateLimit, rateLimitResponse, getClientIp } from "@/lib/rate-limit";
+import { avisarConDebounce } from "@/lib/alertas";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 /**
  * POST /api/public/bold-link — genera un link de pago de Bold NUEVO en cada
@@ -17,39 +19,33 @@ import { checkRateLimit, rateLimitResponse, getClientIp } from "@/lib/rate-limit
 export const runtime = "nodejs";
 
 interface ProductoPublico {
+  slug: string; // terapeutas.slug — para buscar su fila real (identity key, secreto de webhook)
   montoUnidades: number;
   moneda: "USD" | "COP";
   descripcion: string;
-  identityKey: string;
   callbackUrl: string;
 }
 
-// Catálogo fijo v1 — cuando Elizabeth (y las demás) tengan su fila real en
-// `terapeutas` con precios/identity key propios, esto se reemplaza por una
-// consulta a la tabla. Por ahora, hardcoded para no bloquear el fix urgente
-// del link agotándose en cada compra. La llave sale de env (no del código):
-// Bold la rota de vez en cuando (pasó en vivo el 21-sep-2026, rompiendo la
-// llave vieja sin aviso) y así se actualiza sin tocar código ni redeploy de
-// más archivos.
-function catalogo(): Record<string, ProductoPublico> {
-  const identityKey = process.env.BOLD_IDENTITY_KEY_ELIZABETH ?? "";
-  return {
-    eli_individual: {
-      montoUnidades: 75,
-      moneda: "USD",
-      descripcion: "Sesion individual de terapia - Elizabet Garcia Duque",
-      identityKey,
-      callbackUrl: "https://psicologaelizabetgarciad.com/gracias.html",
-    },
-    eli_paquete_x3: {
-      montoUnidades: 203,
-      moneda: "USD",
-      descripcion: "Paquete de 3 sesiones de terapia - Elizabet Garcia Duque",
-      identityKey,
-      callbackUrl: "https://psicologaelizabetgarciad.com/gracias.html",
-    },
-  };
-}
+// El precio/descripción de cada producto sí vive en código (es config del
+// sitio público) — lo que se resuelve contra la base es la terapeuta detrás
+// (slug), para que su identity key y su webhook de Bold salgan de su propia
+// fila en `terapeutas` en cuanto exista, no de una env var hardcodeada.
+const CATALOGO: Record<string, ProductoPublico> = {
+  eli_individual: {
+    slug: "elizabeth",
+    montoUnidades: 75,
+    moneda: "USD",
+    descripcion: "Sesion individual de terapia - Elizabet Garcia Duque",
+    callbackUrl: "https://psicologaelizabetgarciad.com/gracias.html",
+  },
+  eli_paquete_x3: {
+    slug: "elizabeth",
+    montoUnidades: 203,
+    moneda: "USD",
+    descripcion: "Paquete de 3 sesiones de terapia - Elizabet Garcia Duque",
+    callbackUrl: "https://psicologaelizabetgarciad.com/gracias.html",
+  },
+};
 
 function conCors(res: NextResponse): NextResponse {
   res.headers.set("Access-Control-Allow-Origin", "*");
@@ -75,17 +71,34 @@ export async function POST(req: NextRequest) {
   }
 
   const producto = (body as { producto?: unknown })?.producto;
-  const config = typeof producto === "string" ? catalogo()[producto] : undefined;
+  const config = typeof producto === "string" ? CATALOGO[producto] : undefined;
   if (!config) return conCors(NextResponse.json({ error: "Producto desconocido" }, { status: 422 }));
-  if (!config.identityKey) {
-    console.error("[bold-link] falta_BOLD_IDENTITY_KEY_ELIZABETH");
+
+  const admin = createAdminClient();
+  const { data: terapeuta } = await admin
+    .from("terapeutas")
+    .select("id, bold_identity_key")
+    .eq("slug", config.slug)
+    .maybeSingle<{ id: string; bold_identity_key: string | null }>();
+
+  // Sin fila real todavía: cae a la env var (mismo comportamiento que antes,
+  // nunca rompe el sitio mientras se termina de dar de alta a la terapeuta).
+  const identityKey = terapeuta?.bold_identity_key || process.env.BOLD_IDENTITY_KEY_ELIZABETH || "";
+  if (!identityKey) {
+    console.error("[bold-link] falta_identity_key", { slug: config.slug });
+    await avisarConDebounce(
+      "bold_link_endpoint",
+      "🚨 Un visitante intentó pagar en el sitio de Elizabeth pero falta configurar la llave de Bold en el servidor.",
+      "urgent",
+      10,
+    );
     return conCors(NextResponse.json({ error: "Falta configurar la llave de Bold." }, { status: 500 }));
   }
 
   const referencia = `pub_${producto}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
   const resultado = await crearLinkDePago({
-    identityKey: config.identityKey,
+    identityKey,
     montoUnidades: config.montoUnidades,
     moneda: config.moneda,
     descripcion: config.descripcion,
@@ -95,7 +108,32 @@ export async function POST(req: NextRequest) {
 
   if (!resultado.ok || !resultado.url) {
     console.error("[bold-link] fallo_creacion", { producto, error: resultado.error });
+    await avisarConDebounce(
+      "bold_link_endpoint",
+      `🚨 Un visitante intentó pagar en el sitio de Elizabeth y falló al generar el link (producto: ${producto}). Bold respondió: ${resultado.error ?? "sin detalle"}. El botón habrá caído al link de respaldo — revisa si sigue sirviendo.`,
+      "urgent",
+      10,
+    );
     return conCors(NextResponse.json({ error: "No se pudo generar el link de pago. Intenta de nuevo." }, { status: 502 }));
+  }
+
+  // Con fila real de terapeuta: deja constancia en solicitudes_pago para que
+  // el webhook de Bold (que busca por referencia + terapeuta_id) pueda
+  // encontrar el producto y quede correctamente registrado en pagos_bold.
+  // Sin paciente vinculado (es un comprador anónimo del sitio, no alguien ya
+  // dado de alta en el CRM) — best-effort: si falla, el link ya se generó
+  // bien y el pago se sigue procesando igual, solo sin este registro previo.
+  if (terapeuta?.id) {
+    const { error } = await admin.from("solicitudes_pago").insert({
+      referencia,
+      terapeuta_id: terapeuta.id,
+      producto: config.descripcion,
+      monto: config.montoUnidades,
+      moneda: config.moneda,
+      bold_payment_link_id: resultado.paymentLinkId ?? null,
+      url_pago: resultado.url,
+    });
+    if (error) console.error("[bold-link] solicitud_pago_no_registrada", { referencia, code: error.code });
   }
 
   return conCors(NextResponse.json({ url: resultado.url }));

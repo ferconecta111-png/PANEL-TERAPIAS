@@ -80,6 +80,31 @@ export default async function AnaliticaPage({
   const totalVistas = vistas.length;
   const tasaClic = totalVistas > 0 ? ((clics.length / totalVistas) * 100).toFixed(1) : "0.0";
 
+  // Ingresos reales de Bold — se busca a la terapeuta por el mismo slug del
+  // sitio (eventos_pagina.sitio_slug === terapeutas.slug). Si todavía no
+  // tiene fila real, esta sección simplemente no aparece (best-effort).
+  const { data: terapeutaRow } = await supabase
+    .from("terapeutas")
+    .select("id")
+    .eq("slug", sitio)
+    .maybeSingle<{ id: string }>();
+
+  let pagos: { monto: number; moneda: string; producto: string | null; created_at: string }[] = [];
+  if (terapeutaRow?.id) {
+    const { data: pagosData } = await supabase
+      .from("pagos_bold")
+      .select("monto, moneda, producto, created_at")
+      .eq("terapeuta_id", terapeutaRow.id)
+      .eq("estado", "aprobado")
+      .gte("created_at", desde)
+      .order("created_at", { ascending: false })
+      .returns<{ monto: number; moneda: string; producto: string | null; created_at: string }[]>();
+    pagos = pagosData ?? [];
+  }
+  const ingresoPorMoneda = new Map<string, number>();
+  for (const p of pagos) ingresoPorMoneda.set(p.moneda, (ingresoPorMoneda.get(p.moneda) ?? 0) + Number(p.monto));
+  const tasaConversion = clics.length > 0 ? ((pagos.length / clics.length) * 100).toFixed(1) : "0.0";
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -122,6 +147,52 @@ export default async function AnaliticaPage({
           <p className="mt-1 text-2xl font-semibold text-[var(--text)]">{tasaClic}%</p>
         </div>
       </div>
+
+      {terapeutaRow?.id ? (
+        <section className="rounded-2xl border border-[var(--accent)] bg-[var(--accent-soft)] p-5">
+          <h2 className="mb-1 text-base font-semibold text-[var(--text)]">Ingresos reales (Bold)</h2>
+          <p className="mb-4 text-xs text-[var(--text-dim)]">Pagos aprobados de verdad, no clics — conectado directo al webhook de Bold.</p>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            {ingresoPorMoneda.size === 0 ? (
+              <p className="col-span-full text-sm text-[var(--text-dim)]">Sin pagos aprobados todavía en esta ventana.</p>
+            ) : (
+              [...ingresoPorMoneda.entries()].map(([moneda, monto]) => (
+                <div key={moneda} className="rounded-xl bg-[var(--surface)] p-3">
+                  <p className="text-xs uppercase tracking-wide text-[var(--text-dim)]">Cobrado ({moneda})</p>
+                  <p className="mt-1 text-xl font-semibold text-[var(--text)]">
+                    {monto.toLocaleString("es-MX", { style: "currency", currency: moneda })}
+                  </p>
+                </div>
+              ))
+            )}
+            <div className="rounded-xl bg-[var(--surface)] p-3">
+              <p className="text-xs uppercase tracking-wide text-[var(--text-dim)]">Pagos aprobados</p>
+              <p className="mt-1 text-xl font-semibold text-[var(--text)]">{pagos.length}</p>
+            </div>
+            <div className="rounded-xl bg-[var(--surface)] p-3">
+              <p className="text-xs uppercase tracking-wide text-[var(--text-dim)]">Conversión (clic → pago)</p>
+              <p className="mt-1 text-xl font-semibold text-[var(--text)]">{tasaConversion}%</p>
+            </div>
+          </div>
+          {pagos.length > 0 && (
+            <div className="mt-4 flex flex-col gap-1.5 border-t border-[var(--border)] pt-4">
+              {pagos.slice(0, 8).map((p, i) => (
+                <div key={i} className="flex items-center justify-between text-xs">
+                  <span className="text-[var(--text-dim)]">{fmtFecha(p.created_at)} · {p.producto ?? "(sin producto)"}</span>
+                  <span className="font-medium text-[var(--text)]">
+                    {Number(p.monto).toLocaleString("es-MX", { style: "currency", currency: p.moneda })}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-[var(--border)] p-5 text-sm text-[var(--text-dim)]">
+          Los ingresos reales de Bold aparecerán aquí en cuanto esta terapeuta tenga su fila real en el panel
+          (con su <code>slug</code>, su llave de Bold y su webhook configurado).
+        </div>
+      )}
 
       <section className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-5">
         <h2 className="mb-4 text-base font-semibold text-[var(--text)]">Visitas por día</h2>
