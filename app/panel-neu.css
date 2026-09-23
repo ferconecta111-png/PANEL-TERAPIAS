@@ -1,0 +1,722 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   panel-neu.css — Identidad neumórfica del PANEL /admin (portada de mibgi).
+
+   LEY DE ALCANCE (no la rompas):
+   1. Este archivo lo importa ÚNICAMENTE `app/admin/layout.tsx`.
+   2. TODA regla cuelga de `[data-panel="vsl"]`, el atributo que monta el
+      contenedor raíz del panel. Las landings públicas (`app/(funnels)`,
+      `components/{funnel,player,booking,typ}`) NUNCA llevan ese atributo,
+      así que este archivo no puede alcanzarlas ni por accidente.
+   3. Los tokens del panel NO se declaran en `:root`. Se declaran sobre
+      `[data-panel="vsl"][data-theme="panel-light"|"panel-dark"]`. `--bg`,
+      `--surface-2`, `--ok`, `--warn`, `--danger` y `--cta-ink` existen en
+      AMBOS sistemas con valores incompatibles: aquí solo se redefinen para
+      los descendientes del panel.
+   4. Este archivo va SIN `@layer`, igual que en mibgi: las clases `.neu*`,
+      `.t-*`, `.btn*` y `.pressable` le ganan a cualquier utilidad de
+      Tailwind (que vive en `@layer utilities`). Corolario: dentro de un
+      componente del panel, otra superficie se pide por PROP, nunca con una
+      clase suelta tipo `bg-surface-2`, y una sombra en `style` inline mata
+      el hundido de `:active`.
+
+   Física del neumorfismo (no es estética, es una regla):
+   (a) superficie === fondo — por eso el claro es #e6ebf4 y no blanco, y el
+       oscuro #121a2e y no casi-negro: sin ese gris no hay dónde pintar la
+       sombra clara.
+   (b) UNA sola luz a 315° (arriba-izquierda) para todo el panel.
+   (c) Hundido = entrada de datos o presionado · Elevado = pulsable o
+       contenedor.
+   (d) Elevaciones con relación offset:blur de 1:2.
+   (e) Radios generosos o se rompe la ilusión de extrusión.
+   (f) Foco `outline 3px` con `offset 3px` (pegado, la sombra se lo come).
+
+   Ratios de contraste: calculados con la fórmula de luminancia relativa de
+   WCAG 2.1 contra la superficie que aplica en cada caso.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tema CLARO del panel ────────────────────────────────────────────────── */
+[data-panel="vsl"][data-theme="panel-light"] {
+  color-scheme: light;
+
+  /* Superficies (opacas — el neumorfismo no admite translucidez) */
+  --bg: #e6ebf4;
+  --surface: #e6ebf4;
+  --surface-2: #edf1f8;
+  --surface-sunk: #dde3ef;
+  --bg-deep: #dbe2ee;
+
+  /* Tinta */
+  --ink: #0b1220;            /* 15.65 sobre --surface */
+  --ink-2: #3d4a61;          /* 7.47  sobre --surface */
+  --ink-3: #535f77;          /* 5.37  sobre --surface */
+  /* Se mide contra --surface-sunk, NO contra --surface: esta tinta cae en
+     el relleno HUNDIDO (.control::placeholder y .btn:disabled, ambos con
+     background: var(--surface-sunk)). El valor anterior (#6e7a92) traía
+     el ratio 3.61 medido contra --surface; sobre el hundido real daba
+     3.35. Este da 4.55 sobre --surface-sunk (y 4.50 sobre --bg-deep, el
+     fondo más oscuro del tema: sigue pasando AA). */
+  --ink-disabled: #5b6579;   /* 4.55 sobre --surface-sunk */
+
+  /* Acción: --action SOLO como relleno (blanco encima 5.17).
+     Como TEXTO o enlace se usa --action-ink (5.60): --action falla con 4.32. */
+  --action: #2563eb;
+  --action-ink: #1d4ed8;     /* 5.60 */
+  --action-ink-rgb: 29, 78, 216;
+  --action-press: #1a44bd;   /* 6.74 */
+  --cta-ink: #ffffff;
+
+  /* Estados (par tinta / fondo suave) */
+  --ok: #0f5c2e;             /* 6.78 */
+  --ok-soft: #d6f0e0;        /* tinta sobre este fondo: 6.72 */
+  --warn: #7a4a06;           /* 6.25 */
+  --warn-soft: #fbeecb;      /* 6.48 */
+  --danger: #a81919;         /* 6.23 */
+  --danger-soft: #fadddd;    /* 5.84 */
+  --info: #1a44bd;           /* 6.74 */
+  --info-soft: #dbe6fb;      /* 6.42 */
+
+  /* Líneas: --line es DECORATIVA. Los controles (inputs, pestañas, toggles y
+     botones solo-icono) exigen --line-control por WCAG 1.4.11.
+     Ratios de --line-control: 3.32 sobre --surface · 3.50 sobre
+     --surface-2 · 3.08 sobre --surface-sunk (el borde del .control
+     hundido, que es el peor caso y el que manda). */
+  --line: #cdd5e4;
+  --line-strong: #aebcd3;
+  --line-control: #71809f;
+  --ring: #1d4ed8;
+
+  /* Constelaciones por bloque (5.25–5.94 sobre su propio soft) */
+  --sec-mision-ink: #1d4ed8;
+  --sec-mision-soft: #d9e4fb;
+  --sec-instrumentos-ink: #6d28d9;
+  --sec-instrumentos-soft: #e7defa;
+  --sec-cuenta-ink: #7d5200;
+  --sec-cuenta-soft: #f4e7c9;
+
+  /* Luz única a 315° */
+  --neu-dark: rgba(157, 174, 201, 0.6);
+  --neu-light: rgba(255, 255, 255, 0.95);
+}
+
+/* ── Tema OSCURO del panel ───────────────────────────────────────────────── */
+[data-panel="vsl"][data-theme="panel-dark"] {
+  color-scheme: dark;
+
+  --bg: #121a2e;
+  --surface: #121a2e;
+  --surface-2: #18223a;
+  --surface-sunk: #0d1424;
+  --bg-deep: #070d1a;
+
+  --ink: #eef2f9;            /* 15.42 sobre --surface */
+  --ink-2: #b6c2d9;          /* 9.65  sobre --surface */
+  --ink-3: #94a2be;          /* 6.74  sobre --surface */
+  --ink-disabled: #77869f;   /* 4.98 sobre --surface-sunk, el relleno hundido donde cae */
+
+  --action: #4f8bff;         /* 5.33 */
+  --action-ink: #7aa7ff;     /* 7.25 */
+  --action-ink-rgb: 122, 167, 255;
+  --action-press: #3f78e8;
+  --cta-ink: #06101f;
+
+  --ok: #4ade80;
+  --ok-soft: #10331e;
+  --warn: #fbbf24;
+  --warn-soft: #362a08;
+  --danger: #f87171;
+  --danger-soft: #3b1212;
+  --info: #7aa7ff;
+  --info-soft: #16233f;
+
+  --line: #223354;
+  --line-strong: #33456d;
+  /* Peor caso = sobre --surface-2 (tarjetas y filas del panel), no sobre
+     --surface: el valor anterior (#54699a) marcaba 3.19 medido contra
+     --surface pero caía a 2.91 sobre --surface-2, por debajo del 3.0 que
+     pide WCAG 1.4.11 para bordes de control. */
+  --line-control: #5c72a4;   /* 3.31 sobre --surface-2 · 3.63 sobre --surface · 3.85 sobre --surface-sunk */
+  --ring: #7aa7ff;
+
+  --sec-mision-ink: #7aa7ff;
+  --sec-mision-soft: #16233f;
+  --sec-instrumentos-ink: #c4b5fd;
+  --sec-instrumentos-soft: #241d3d;
+  --sec-cuenta-ink: #f0c24b;  /* 10.31 sobre su soft */
+  --sec-cuenta-soft: #2e2410;
+
+  /* En oscuro la luz es TENUE: más del 6% ensucia la superficie. */
+  --neu-dark: rgba(3, 7, 18, 0.68);
+  --neu-light: rgba(126, 152, 208, 0.055);
+}
+
+/* ── Tokens compartidos por ambos temas ──────────────────────────────────── */
+[data-panel="vsl"] {
+  /* Radios generosos (regla e) */
+  --r-xs: 10px;
+  --r-sm: 14px;
+  --r-md: 20px;
+  --r-lg: 28px;
+  --r-xl: 36px;
+  --r-pill: 999px;
+
+  /* Movimiento */
+  --ease-soft: cubic-bezier(0.32, 0.72, 0, 1);
+  --t-fast: 140ms;
+  --t-base: 220ms;
+  --t-slow: 420ms;
+  --lift: -2px;
+
+  /* Elevaciones (offset:blur 1:2) y hundidos */
+  --e1: 4px 4px 8px var(--neu-dark), -4px -4px 8px var(--neu-light);
+  --e2: 8px 8px 16px var(--neu-dark), -8px -8px 16px var(--neu-light);
+  --e3: 16px 16px 32px var(--neu-dark), -16px -16px 32px var(--neu-light);
+  --in1: inset 3px 3px 6px var(--neu-dark), inset -3px -3px 6px var(--neu-light);
+  --in2: inset 6px 6px 12px var(--neu-dark), inset -6px -6px 12px var(--neu-light);
+  --press: var(--in1), inset 0 0 0 999px rgba(0, 0, 0, 0.03);
+  --hi-top: inset 0 1px 0 var(--neu-light);
+
+  /* ── Puente al vocabulario heredado del panel ───────────────────────────
+     Las 32 pantallas actuales pintan con `--text`, `--text-dim`, `--accent`,
+     `--surface-1`, `--glass`, `--cta-*`. Sin este puente, el texto crema de
+     club-2026 quedaría ilegible sobre la superficie clara. Se remapean aquí
+     (dentro del panel y solo aquí) al vocabulario neumórfico, de modo que
+     una pantalla sin migrar sigue siendo legible y coherente.
+     `--accent` apunta a --action-ink porque su uso heredado es texto/borde;
+     el RELLENO del CTA usa --action vía --cta-bg. */
+  --surface-1: var(--surface);
+  --glass: var(--surface-2);          /* opaco: mata el translúcido heredado */
+  --accent: var(--action-ink);
+  --accent-rgb: var(--action-ink-rgb);
+  --accent-hi: var(--action);
+  --accent-2: var(--action-press);
+  --decor: var(--action-ink);
+  --decor-rgb: var(--action-ink-rgb);
+  --text: var(--ink);
+  --text-dim: var(--ink-2);
+  --text-faint: var(--ink-3);
+  --cta-bg: var(--action);
+  --cta-ring: 0 0 0 0 transparent;
+  --cta-case: none;                   /* el neumorfismo no grita en mayúsculas */
+  --cta-icon-display: inline-flex;
+  --ease-warm: var(--ease-soft);
+
+  /* Tipografía: Archivo (display) + Inter (body), igual que mibgi.
+     Las carga `components/admin/ui/fuentes.ts` con next/font (auto-hospedado). */
+  --font-display: var(--font-archivo, ui-sans-serif, system-ui, sans-serif);
+  --font-body: var(--font-inter, ui-sans-serif, system-ui, sans-serif);
+
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  /* El neumorfismo baja el contraste de los bordes y se compensa con tamaño.
+     Público 35-60: 17px es el piso, no el techo. */
+  font-size: 17px;
+}
+
+/* El `body` global pinta con el `--bg` de los funnels. Cuando el panel está
+   montado, el lienzo de detrás (rebote de scroll) también es del panel. */
+html:has([data-panel="vsl"][data-theme="panel-light"]) body {
+  background: #dbe2ee;
+}
+html:has([data-panel="vsl"][data-theme="panel-dark"]) body {
+  background: #070d1a;
+}
+
+/* Foco visible pegado al borde: con offset mayor la sombra se lo come.
+   Sin `border-radius` aquí: el contorno ya sigue el radio del elemento, y
+   forzarlo cambiaría de forma justo al enfocar. */
+[data-panel="vsl"] :focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
+}
+
+/* Este archivo va sin `@layer`, así que `hidden`/`md:hidden` de Tailwind NO
+   pueden apagar un `.btn` (que declara `display: inline-flex`). Esta es la
+   pareja que sí gana: clase repetida a propósito para subir especificidad por
+   encima de `.btn` sin depender del orden dentro del archivo. */
+[data-panel="vsl"] .solo-movil.solo-movil {
+  display: none;
+}
+@media (max-width: 767px) {
+  [data-panel="vsl"] .solo-movil.solo-movil {
+    display: inline-flex;
+  }
+}
+
+[data-panel="vsl"] ::selection {
+  background: var(--action);
+  color: #fff;
+}
+
+/* ═══ Superficies ═══════════════════════════════════════════════════════════ */
+
+[data-panel="vsl"] .neu {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--e1);
+}
+
+[data-panel="vsl"] .neu-2 {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--e2);
+}
+
+[data-panel="vsl"] .neu-3 {
+  background: var(--surface);
+  border-radius: var(--r-lg);
+  box-shadow: var(--e3);
+}
+
+[data-panel="vsl"] .neu-sunk {
+  background: var(--surface-sunk);
+  border-radius: var(--r-sm);
+  box-shadow: var(--in1);
+}
+
+[data-panel="vsl"] .neu-sunk-2 {
+  background: var(--surface-sunk);
+  border-radius: var(--r-md);
+  box-shadow: var(--in2);
+}
+
+[data-panel="vsl"] .neu-flat {
+  background: var(--surface-2);
+  border-radius: var(--r-md);
+  box-shadow: var(--hi-top);
+}
+
+/* ═══ Interacción ═══════════════════════════════════════════════════════════ */
+
+[data-panel="vsl"] .pressable {
+  transition:
+    transform var(--t-fast) var(--ease-soft),
+    box-shadow var(--t-fast) var(--ease-soft),
+    background-color var(--t-fast) var(--ease-soft),
+    color var(--t-fast) var(--ease-soft);
+}
+
+[data-panel="vsl"] .pressable:active {
+  transform: scale(0.985);
+  transition-duration: 90ms;
+  box-shadow: var(--press);
+}
+
+[data-panel="vsl"] .hoverable {
+  transition:
+    transform var(--t-base) var(--ease-soft),
+    box-shadow var(--t-base) var(--ease-soft);
+}
+
+[data-panel="vsl"] .liftable {
+  transition:
+    transform var(--t-base) var(--ease-soft),
+    box-shadow var(--t-base) var(--ease-soft);
+}
+
+@media (hover: hover) {
+  [data-panel="vsl"] .hoverable:hover {
+    transform: translateY(var(--lift));
+    box-shadow: var(--e2);
+  }
+
+  [data-panel="vsl"] .liftable:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--e3);
+  }
+}
+
+/* ═══ Entradas escalonadas ══════════════════════════════════════════════════ */
+
+[data-panel="vsl"] .fade-in {
+  animation: neu-fade var(--t-slow) var(--ease-soft) both;
+}
+
+[data-panel="vsl"] .stagger > * {
+  animation: neu-fade var(--t-slow) var(--ease-soft) both;
+  animation-delay: calc(var(--i, 0) * 50ms);
+}
+
+@keyframes neu-fade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+[data-panel="vsl"] .skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-sunk) 25%,
+    var(--surface-2) 50%,
+    var(--surface-sunk) 75%
+  );
+  background-size: 200% 100%;
+  border-radius: var(--r-xs);
+  animation: neu-skeleton 1.4s linear infinite;
+}
+
+@keyframes neu-skeleton {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+[data-panel="vsl"] .brillo-avance {
+  position: relative;
+  overflow: hidden;
+}
+
+[data-panel="vsl"] .brillo-avance::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--neu-light), transparent);
+  transform: translateX(-100%);
+  animation: neu-brillo 2.2s var(--ease-soft) infinite;
+}
+
+@keyframes neu-brillo {
+  to {
+    transform: translateX(100%);
+  }
+}
+
+[data-panel="vsl"] .latido {
+  animation: neu-latido 1.8s var(--ease-soft) infinite;
+}
+
+@keyframes neu-latido {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.06);
+  }
+}
+
+/* Avisa que hay columnas escondidas a los lados. Exige fondo --surface. */
+[data-panel="vsl"] .scroll-sombra-x {
+  overflow-x: auto;
+  background:
+    linear-gradient(90deg, var(--surface) 30%, transparent) left center,
+    linear-gradient(90deg, transparent, var(--surface) 70%) right center,
+    radial-gradient(farthest-side at 0 50%, var(--neu-dark), transparent) left center,
+    radial-gradient(farthest-side at 100% 50%, var(--neu-dark), transparent) right center;
+  background-repeat: no-repeat;
+  background-size:
+    48px 100%,
+    48px 100%,
+    16px 100%,
+    16px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
+
+/* ═══ Constelaciones por bloque ═════════════════════════════════════════════ */
+
+[data-panel="vsl"] .sec-mision {
+  --sec-ink: var(--sec-mision-ink);
+  --sec-soft: var(--sec-mision-soft);
+}
+[data-panel="vsl"] .sec-instrumentos {
+  --sec-ink: var(--sec-instrumentos-ink);
+  --sec-soft: var(--sec-instrumentos-soft);
+}
+[data-panel="vsl"] .sec-cuenta {
+  --sec-ink: var(--sec-cuenta-ink);
+  --sec-soft: var(--sec-cuenta-soft);
+}
+
+/* ═══ Tipografía ════════════════════════════════════════════════════════════ */
+
+[data-panel="vsl"] .t-display {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 1.2rem + 3vw, 2.75rem);
+  font-weight: 800;
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+[data-panel="vsl"] .t-title {
+  font-family: var(--font-display);
+  font-size: clamp(1.5rem, 1.1rem + 1.6vw, 2rem);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+  text-wrap: balance;
+}
+
+[data-panel="vsl"] .t-subtitle {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--ink);
+}
+
+[data-panel="vsl"] .t-body {
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: var(--ink);
+}
+
+[data-panel="vsl"] .t-support {
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+
+[data-panel="vsl"] .t-micro {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+/* 14px, NUNCA 13: es la cejilla de sección, no una nota al pie. */
+[data-panel="vsl"] .t-eyebrow {
+  font-size: 0.875rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+[data-panel="vsl"] .t-stat {
+  font-family: var(--font-display);
+  font-size: clamp(2.25rem, 1.6rem + 2.6vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+/* Un 0 es un dato real, no una alarma: en tinta plena competía con las cifras
+   que sí importan. Va como clase (y no como utilidad `text-…`) porque
+   `.t-stat` ya fija `color` sin `@layer` y le ganaría. */
+[data-panel="vsl"] .t-stat.valor-cero {
+  color: var(--ink-3);
+}
+
+[data-panel="vsl"] .num,
+[data-panel="vsl"] .tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ═══ Botones ═══════════════════════════════════════════════════════════════
+   Se definen aquí (no con utilidades) porque este archivo va sin @layer y
+   le gana a Tailwind: una clase suelta en el JSX no pintaría. */
+
+[data-panel="vsl"] .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 1.25rem;
+  border-radius: var(--r-sm);
+  border: 0;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.2;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    transform var(--t-fast) var(--ease-soft),
+    box-shadow var(--t-fast) var(--ease-soft),
+    background-color var(--t-fast) var(--ease-soft),
+    color var(--t-fast) var(--ease-soft);
+}
+
+[data-panel="vsl"] .btn:active:not(:disabled) {
+  transform: scale(0.985);
+  transition-duration: 90ms;
+}
+
+[data-panel="vsl"] .btn:disabled,
+[data-panel="vsl"] .btn[aria-disabled="true"] {
+  cursor: not-allowed;
+  color: var(--ink-disabled);
+  box-shadow: var(--in1);
+  background: var(--surface-sunk);
+}
+
+[data-panel="vsl"] .btn-primario {
+  background: var(--action);
+  color: var(--cta-ink);
+  box-shadow: var(--e1);
+}
+@media (hover: hover) {
+  [data-panel="vsl"] .btn-primario:hover:not(:disabled) {
+    background: var(--action-press);
+  }
+}
+[data-panel="vsl"] .btn-primario:active:not(:disabled) {
+  box-shadow: var(--in1);
+}
+
+[data-panel="vsl"] .btn-secundario {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--e1);
+}
+[data-panel="vsl"] .btn-secundario:active:not(:disabled) {
+  box-shadow: var(--press);
+}
+
+[data-panel="vsl"] .btn-peligro {
+  background: var(--danger);
+  color: var(--danger-soft);
+  box-shadow: var(--e1);
+}
+[data-panel="vsl"] .btn-peligro:active:not(:disabled) {
+  box-shadow: var(--in1);
+}
+
+[data-panel="vsl"] .btn-fantasma {
+  background: transparent;
+  color: var(--ink-2);
+  box-shadow: none;
+}
+@media (hover: hover) {
+  [data-panel="vsl"] .btn-fantasma:hover:not(:disabled) {
+    color: var(--ink);
+    box-shadow: var(--e1);
+    background: var(--surface);
+  }
+}
+[data-panel="vsl"] .btn-fantasma:active:not(:disabled) {
+  box-shadow: var(--in1);
+  background: var(--surface-sunk);
+}
+
+/* Solo-icono: cuadrado de 44px y borde obligatorio (WCAG 1.4.11 — sin texto
+   dentro, la única pista de que es un control es su contorno). */
+[data-panel="vsl"] .btn-icono {
+  width: 44px;
+  min-width: 44px;
+  padding: 0;
+  border: 1px solid var(--line-control);
+}
+
+/* Con `:disabled` para ganarle al `not-allowed` del bloque de arriba: un botón
+   ocupado no está prohibido, está trabajando. */
+[data-panel="vsl"] .btn-ocupado:disabled {
+  cursor: progress;
+}
+
+/* ═══ Controles de entrada ══════════════════════════════════════════════════
+   Todo control (input, textarea, select, pestaña, toggle) va HUNDIDO y con
+   --line-control: entrada de datos = presionado (regla c). */
+
+[data-panel="vsl"] .control {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.625rem 0.875rem;
+  background: var(--surface-sunk);
+  border: 1px solid var(--line-control);
+  border-radius: var(--r-sm);
+  box-shadow: var(--in1);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+[data-panel="vsl"] .control::placeholder {
+  color: var(--ink-disabled);
+}
+
+[data-panel="vsl"] .control:disabled {
+  color: var(--ink-disabled);
+  cursor: not-allowed;
+}
+
+/* ═══ Ancho de pantalla ═════════════════════════════════════════════════════
+   Una pantalla que necesita todo el ancho (tablas anchas, tableros) marca su
+   contenedor con `.pantalla-ancha` y el `main` suelta el límite. */
+
+[data-panel="vsl"] main:has(> .pantalla-ancha) {
+  max-width: none;
+}
+
+/* ═══ Movimiento reducido ═══════════════════════════════════════════════════ */
+
+@media (prefers-reduced-motion: reduce) {
+  [data-panel="vsl"] *,
+  [data-panel="vsl"] *::before,
+  [data-panel="vsl"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  [data-panel="vsl"] .pressable:active,
+  [data-panel="vsl"] .btn:active:not(:disabled),
+  [data-panel="vsl"] .hoverable:hover,
+  [data-panel="vsl"] .liftable:hover {
+    transform: none;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   FEEDBACK DE ACCIONES — que el panel conteste cuando algo sale bien.
+   
+   Por qué existe: en un CRM se hacen decenas de movimientos al día. Sin
+   respuesta visible, la persona duda de si guardó y vuelve a hacer clic;
+   con respuesta, sigue de largo. La animación no es adorno: es la
+   confirmación más rápida que se puede dar (más que leer un texto).
+   
+   Todo respeta prefers-reduced-motion: quien pidió menos movimiento ve el
+   color, no el brinco.
+   ═══════════════════════════════════════════════════════════════════ */
+
+@keyframes neu-destello {
+  0%   { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); }
+  60%  { box-shadow: 0 0 0 10px color-mix(in srgb, var(--ok) 0%, transparent); }
+  100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 0%, transparent); }
+}
+
+/** La tarjeta que acaba de moverse: un pulso y ya. */
+.neu-hecho {
+  animation: neu-destello 900ms ease-out;
+}
+
+@keyframes neu-entra-aviso {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.neu-aviso-entra {
+  animation: neu-entra-aviso 220ms ease-out;
+}
+
+/* Celebración de un cierre: se gana una venta pocas veces al día, y cuando
+   pasa el panel lo festeja. Sutil — un brillo que crece y se va. */
+@keyframes neu-celebra {
+  0%   { transform: scale(0.96); opacity: 0; }
+  35%  { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.neu-celebra {
+  animation: neu-celebra 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .neu-hecho,
+  .neu-aviso-entra,
+  .neu-celebra {
+    animation: none;
+  }
+}

@@ -1,36 +1,68 @@
-@import url("https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Inter:wght@400;500;600&display=swap");
 @import "tailwindcss";
+@import "./panel-neu.css";
 
-:root {
-  --bg: #f5f0e8;
-  --surface: #ffffff;
-  --surface-2: #eee7d9;
-  --text: #3a3d3a;
-  --text-dim: #6b6f6b;
-  --accent: #8ba888;
-  --accent-ink: #ffffff;
-  --accent-soft: #e3ebe1;
-  --secondary: #6b8ca3;
-  --secondary-soft: #e5edf1;
-  --danger: #c17a6b;
-  --border: #e2dccd;
+/*
+ * Puente al vocabulario que ya usan las páginas de este panel (.card,
+ * .btn-accent, .input-soft, var(--bg|--surface-2|--text|--text-dim|--accent|
+ * --accent-ink|--accent-soft|--secondary|--secondary-soft|--danger|--border|
+ * --font-display|--font-sans)) — panel-neu.css ya define --bg, --surface,
+ * --surface-2, --text, --text-dim, --accent y --danger directamente; aquí
+ * solo se completan los nombres propios de este repo que panel-neu.css no
+ * conoce, mismo patrón que su propio "puente al vocabulario heredado".
+ */
+[data-panel="vsl"] {
+  --border: var(--line-control);
+  --accent-ink: var(--cta-ink);
+  --accent-soft: var(--info-soft);
+  --secondary: var(--action-ink);
+  --secondary-soft: var(--info-soft);
+  --font-sans: var(--font-body);
 }
 
-@theme inline {
-  --color-bg: var(--bg);
-  --color-surface: var(--surface);
-  --color-surface-2: var(--surface-2);
-  --color-text: var(--text);
-  --color-text-dim: var(--text-dim);
-  --color-accent: var(--accent);
-  --color-accent-ink: var(--accent-ink);
-  --color-accent-soft: var(--accent-soft);
-  --color-secondary: var(--secondary);
-  --color-secondary-soft: var(--secondary-soft);
-  --color-danger: var(--danger);
-  --color-border: var(--border);
-  --font-display: "Quicksand", sans-serif;
-  --font-sans: "Inter", sans-serif;
+.card {
+  background: var(--surface);
+  border-radius: var(--r-md);
+  box-shadow: var(--e1);
+}
+
+.btn-accent {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 1.25rem;
+  background: var(--action);
+  color: var(--cta-ink);
+  border: 0;
+  border-radius: var(--r-sm);
+  box-shadow: var(--e1);
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 140ms var(--ease-soft, ease), box-shadow 140ms var(--ease-soft, ease), background-color 140ms;
+}
+.btn-accent:hover:not(:disabled) {
+  background: var(--action-press);
+}
+.btn-accent:active:not(:disabled) {
+  transform: scale(0.985);
+  box-shadow: var(--in1);
+}
+
+.input-soft {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  background: var(--surface-sunk);
+  border: 1px solid var(--line-control);
+  border-radius: var(--r-sm);
+  box-shadow: var(--in1);
+  padding: 10px 14px;
+  color: var(--ink);
+}
+.input-soft:focus {
+  outline: 3px solid var(--ring);
+  outline-offset: 3px;
 }
 
 body {
@@ -41,35 +73,4 @@ body {
 
 h1, h2, h3, .font-display {
   font-family: var(--font-display);
-}
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 16px;
-}
-
-.btn-accent {
-  background: var(--accent);
-  color: var(--accent-ink);
-  border-radius: 12px;
-  padding: 10px 18px;
-  font-weight: 600;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-.btn-accent:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px -4px rgba(139, 168, 136, 0.5);
-}
-
-.input-soft {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 10px 14px;
-  color: var(--text);
-}
-.input-soft:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
 }

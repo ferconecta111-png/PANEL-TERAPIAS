@@ -57,6 +57,8 @@ export async function POST(req: NextRequest) {
     pagina: typeof pagina === "string" ? pagina.slice(0, 200) : null,
     referrer: req.headers.get("referer")?.slice(0, 200) ?? null,
     user_agent: req.headers.get("user-agent")?.slice(0, 200) ?? null,
+    // Vercel manda el pais del visitante gratis en este header — sin geo-IP propio.
+    country: req.headers.get("x-vercel-ip-country") ?? null,
   });
 
   // Nunca revienta la pagina de la terapeuta por un fallo aqui — fire-and-forget en la practica.
