@@ -44,24 +44,36 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ter
     return NextResponse.json({ error: "Firma inválida" }, { status: 401 });
   }
 
-  let evento: {
+  interface EventoBold {
     type?: string;
     data?: {
       payment_id?: string;
       amount?: { currency?: string; total?: number };
       payer_email?: string;
       metadata?: { reference?: string };
+      [campoNoDocumentado: string]: unknown;
     };
-  };
+  }
+
+  let evento: EventoBold;
   try {
     evento = JSON.parse(cuerpoCrudo);
   } catch {
     return NextResponse.json({ error: "JSON inválido" }, { status: 400 });
   }
 
-  // Solo nos interesan ventas aprobadas — rechazos/anulaciones se registran
-  // en el log pero no crean un pago.
-  if (evento.type !== "SALE_APPROVED") {
+  // Pedido de Fernanda (22-sep-2026): antes solo se guardaban aprobados —
+  // ahora también rechazos y anulaciones aprobadas, para poder ver por qué
+  // fallan los pagos y contactar a quien le rechazaron. VOID_REJECTED (un
+  // intento de anular que a su vez falló) no representa un pago nuevo, se
+  // ignora igual que cualquier tipo de evento que Bold agregue a futuro.
+  const MAPA_ESTADO: Record<string, "aprobado" | "rechazado" | "anulado"> = {
+    SALE_APPROVED: "aprobado",
+    SALE_REJECTED: "rechazado",
+    VOID_APPROVED: "anulado",
+  };
+  const estado = evento.type ? MAPA_ESTADO[evento.type] : undefined;
+  if (!estado) {
     return NextResponse.json({ ok: true, ignorado: evento.type });
   }
 
@@ -69,7 +81,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ter
   const paymentId = datos?.payment_id;
   const referencia = datos?.metadata?.reference;
   if (!paymentId || !referencia) {
-    console.error("[webhook/bold] payload_incompleto", { terapeutaId });
+    console.error("[webhook/bold] payload_incompleto", { terapeutaId, tipo: evento.type });
     return NextResponse.json({ error: "Payload incompleto" }, { status: 400 });
   }
 
@@ -84,6 +96,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ter
     .eq("terapeuta_id", terapeutaId)
     .maybeSingle<{ paciente_id: string | null; producto: string | null }>();
 
+  // El nombre exacto del campo de telefono en el payload real de Bold no
+  // esta confirmado todavia (nunca hemos recibido uno) — se prueban los
+  // nombres mas probables y si ninguno pega, queda null pero el payload
+  // completo sigue en raw_payload por si hay que corregir esto despues.
+  const telefono = ["payer_phone", "phone", "phone_number", "payerPhone"]
+    .map(campo => datos?.[campo])
+    .find((v): v is string => typeof v === "string" && v.trim().length > 0) ?? null;
+
   const { error } = await admin.from("pagos_bold").insert({
     terapeuta_id: terapeutaId,
     paciente_id: solicitud?.paciente_id ?? null,
@@ -91,8 +111,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ter
     monto: datos?.amount?.total ?? 0,
     moneda: datos?.amount?.currency ?? "COP",
     producto: solicitud?.producto ?? null,
-    estado: "aprobado",
+    estado,
     payer_email: datos?.payer_email ?? null,
+    payer_phone: telefono,
     raw_payload: evento,
   });
   if (error) {

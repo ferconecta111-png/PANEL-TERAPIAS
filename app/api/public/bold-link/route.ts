@@ -45,6 +45,20 @@ const CATALOGO: Record<string, ProductoPublico> = {
     descripcion: "Paquete de 3 sesiones de terapia - Elizabet Garcia Duque",
     callbackUrl: "https://psicologaelizabetgarciad.com/gracias.html",
   },
+  adriana_individual: {
+    slug: "adriana",
+    montoUnidades: 61,
+    moneda: "USD",
+    descripcion: "Sesion individual de sexologia - Adriana Vargas",
+    callbackUrl: "https://ferconecta111-png.github.io/PAGINA-WEB-ADRIANA-VARGAS/gracias.html",
+  },
+  adriana_paquete_x3: {
+    slug: "adriana",
+    montoUnidades: 183,
+    moneda: "USD",
+    descripcion: "Paquete de 3 sesiones de sexologia - Adriana Vargas",
+    callbackUrl: "https://ferconecta111-png.github.io/PAGINA-WEB-ADRIANA-VARGAS/gracias.html",
+  },
 };
 
 function conCors(res: NextResponse): NextResponse {
@@ -70,9 +84,23 @@ export async function POST(req: NextRequest) {
     return conCors(NextResponse.json({ error: "JSON inválido" }, { status: 400 }));
   }
 
-  const producto = (body as { producto?: unknown })?.producto;
+  const { producto, nombre, telefono, pais } = body as {
+    producto?: unknown;
+    nombre?: unknown;
+    telefono?: unknown;
+    pais?: unknown;
+  };
   const config = typeof producto === "string" ? CATALOGO[producto] : undefined;
   if (!config) return conCors(NextResponse.json({ error: "Producto desconocido" }, { status: 422 }));
+  // Pedido de Fernanda (22-sep-2026): nombre y teléfono son obligatorios —
+  // se piden ANTES de mandar a pagar, para tener el contacto pase lo que
+  // pase con el pago (Bold no lo garantiza, PayPal tampoco siempre).
+  const compradorNombre = typeof nombre === "string" ? nombre.trim().slice(0, 150) : "";
+  const compradorTelefono = typeof telefono === "string" ? telefono.trim().slice(0, 30) : "";
+  const compradorPais = typeof pais === "string" ? pais.trim().slice(0, 60) : null;
+  if (!compradorNombre || !compradorTelefono) {
+    return conCors(NextResponse.json({ error: "Falta nombre o teléfono" }, { status: 422 }));
+  }
 
   const admin = createAdminClient();
   const { data: terapeuta } = await admin
@@ -132,6 +160,10 @@ export async function POST(req: NextRequest) {
       moneda: config.moneda,
       bold_payment_link_id: resultado.paymentLinkId ?? null,
       url_pago: resultado.url,
+      comprador_nombre: compradorNombre,
+      comprador_telefono: compradorTelefono,
+      comprador_pais: compradorPais,
+      pasarela: "bold",
     });
     if (error) console.error("[bold-link] solicitud_pago_no_registrada", { referencia, code: error.code });
   }
