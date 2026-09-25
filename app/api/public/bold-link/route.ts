@@ -109,14 +109,18 @@ export async function POST(req: NextRequest) {
     .eq("slug", config.slug)
     .maybeSingle<{ id: string; bold_identity_key: string | null }>();
 
-  // Sin fila real todavía: cae a la env var (mismo comportamiento que antes,
-  // nunca rompe el sitio mientras se termina de dar de alta a la terapeuta).
-  const identityKey = terapeuta?.bold_identity_key || process.env.BOLD_IDENTITY_KEY_ELIZABETH || "";
+  // Hallazgo 25-sep-2026: esto caía a BOLD_IDENTITY_KEY_ELIZABETH sin importar
+  // qué terapeuta fuera — si a Adriana (o cualquier terapeuta nueva) se le
+  // borraba o nunca se le ponía su bold_identity_key, sus pagos se hubieran
+  // cobrado en silencio a la cuenta de Bold de Elizabeth. Cada terapeuta
+  // SIEMPRE debe usar su propia llave; si no la tiene, se falla fuerte en vez
+  // de adivinar a cuál cuenta mandar el dinero.
+  const identityKey = terapeuta?.bold_identity_key || "";
   if (!identityKey) {
     console.error("[bold-link] falta_identity_key", { slug: config.slug });
     await avisarConDebounce(
       "bold_link_endpoint",
-      "🚨 Un visitante intentó pagar en el sitio de Elizabeth pero falta configurar la llave de Bold en el servidor.",
+      `🚨 Un visitante intentó pagar en el sitio de ${config.slug} pero falta configurar la llave de Bold de esa terapeuta en el servidor.`,
       "urgent",
       10,
     );
