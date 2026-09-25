@@ -1,7 +1,8 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { crearCasoAction, ESTADO_INICIAL_CASO } from "./actions";
+import { crearCasoAction } from "./actions";
+import { ESTADO_INICIAL_CASO } from "./types";
 
 interface Opcion {
   id: string;

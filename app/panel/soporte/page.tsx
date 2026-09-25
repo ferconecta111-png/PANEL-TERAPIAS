@@ -26,9 +26,18 @@ export default async function SoportePage({
   const admin = createAdminClient();
   const { estado: filtroEstado } = await searchParams;
 
+  // Una terapeuta nunca debe ver pacientes ni nombres de otras terapeutas —
+  // antes esto traía TODO sin filtrar y se lo pasaba tal cual al selector de
+  // pacientes del formulario "Nuevo caso" (hallazgo 25-sep-2026).
+  let terapeutasQuery = admin.from("terapeutas").select("id, nombre").order("nombre");
+  let pacientesQuery = admin.from("pacientes").select("id, nombre, terapeuta_id").order("nombre");
+  if (sesion.role !== "admin" && sesion.terapeutaId) {
+    terapeutasQuery = terapeutasQuery.eq("id", sesion.terapeutaId);
+    pacientesQuery = pacientesQuery.eq("terapeuta_id", sesion.terapeutaId);
+  }
   const [{ data: terapeutas }, { data: pacientes }] = await Promise.all([
-    admin.from("terapeutas").select("id, nombre").order("nombre").returns<{ id: string; nombre: string }[]>(),
-    admin.from("pacientes").select("id, nombre, terapeuta_id").order("nombre").returns<{ id: string; nombre: string; terapeuta_id: string | null }[]>(),
+    terapeutasQuery.returns<{ id: string; nombre: string }[]>(),
+    pacientesQuery.returns<{ id: string; nombre: string; terapeuta_id: string | null }[]>(),
   ]);
   const mapaTerapeutas = new Map((terapeutas ?? []).map(t => [t.id, t.nombre]));
   const mapaPacientes = new Map((pacientes ?? []).map(p => [p.id, p.nombre]));
