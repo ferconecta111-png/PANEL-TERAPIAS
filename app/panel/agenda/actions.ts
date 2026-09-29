@@ -124,3 +124,54 @@ export async function rechazarSolicitudAction(solicitudId: string): Promise<{ er
   revalidatePath("/panel/agenda");
   return { error: null };
 }
+
+const SITE_URL = "https://panel-terapeutas.vercel.app";
+
+/**
+ * "Rechazar con alternativa": libera la hora pedida (igual que rechazar) y
+ * arma un WhatsApp ya redactado proponiendo otra hora, con el link publico
+ * para que el paciente la confirme el mismo desde ahi — no creamos la cita
+ * nueva nosotros, porque todavia no hay forma de saber si el paciente SI
+ * puede a esa hora alternativa.
+ */
+export async function proponerHorarioAction(
+  solicitudId: string,
+  fecha: string,
+  hora: string,
+): Promise<ResultadoAceptarSolicitud> {
+  await requireSesion();
+  if (!fecha || !hora) return { error: "Elige fecha y hora para proponer.", linkWhatsapp: null };
+  const admin = createAdminClient();
+
+  const { data: solicitud } = await admin
+    .from("solicitudes_cita")
+    .select("terapeuta_id, paciente_id, estado")
+    .eq("id", solicitudId)
+    .maybeSingle<{ terapeuta_id: string; paciente_id: string; estado: string }>();
+  if (!solicitud) return { error: "Esa solicitud ya no existe.", linkWhatsapp: null };
+  if (solicitud.estado !== "pendiente") return { error: "Esa solicitud ya fue resuelta.", linkWhatsapp: null };
+
+  const propuesta = localAUtc(fecha, hora);
+  if (Number.isNaN(propuesta.getTime())) return { error: "Fecha u hora inválida.", linkWhatsapp: null };
+
+  const { error } = await admin
+    .from("solicitudes_cita")
+    .update({ estado: "rechazada" })
+    .eq("id", solicitudId)
+    .eq("estado", "pendiente");
+  if (error) return { error: "No se pudo actualizar la solicitud.", linkWhatsapp: null };
+
+  const [{ data: paciente }, { data: terapeuta }] = await Promise.all([
+    admin.from("pacientes").select("nombre, telefono").eq("id", solicitud.paciente_id).maybeSingle<{ nombre: string; telefono: string | null }>(),
+    admin.from("terapeutas").select("nombre, slug").eq("id", solicitud.terapeuta_id).maybeSingle<{ nombre: string; slug: string | null }>(),
+  ]);
+
+  revalidatePath("/panel/agenda");
+
+  if (!paciente?.telefono) return { error: null, linkWhatsapp: null };
+  const numero = paciente.telefono.replace(/[^\d]/g, "");
+  const linkAgendar = terapeuta?.slug ? ` ${SITE_URL}/agendar/${terapeuta.slug}` : "";
+  const mensaje = `Hola ${paciente.nombre}, soy ${terapeuta?.nombre ?? "tu terapeuta"}. A esa hora no puedo, pero tengo libre el ${fmtFechaHoraBogota(propuesta.toISOString())} (hora Colombia). Si te sirve, confírmamela aquí:${linkAgendar}`;
+  const linkWhatsapp = `https://wa.me/${numero}?text=${encodeURIComponent(mensaje)}`;
+  return { error: null, linkWhatsapp };
+}
