@@ -7,6 +7,7 @@ import {
   Wallet,
   LifeBuoy,
   BarChart3,
+  KeyRound,
   LogOut,
 } from "lucide-react";
 import { requireSesion } from "@/lib/auth";
@@ -28,6 +29,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     { href: "/panel", label: "Inicio", icon: Home },
     { href: "/panel/pacientes", label: "Mis leads", icon: Contact },
     { href: "/panel/agenda", label: "Mi agenda", icon: CalendarDays },
+    { href: "/panel/analitica", label: "Mi analítica", icon: BarChart3 },
   ];
   const links = sesion.role === "admin" ? linksAdmin : linksTerapeuta;
 
@@ -54,6 +56,13 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         </div>
         <div className="border-t border-[var(--line)] pt-4">
           <p className="mb-2 truncate text-xs text-[var(--text-dim)]">{sesion.email}</p>
+          <Link
+            href="/panel/cuenta"
+            className="pressable mb-2 flex items-center gap-2 text-sm font-medium text-[var(--text-dim)] hover:text-[var(--text)]"
+          >
+            <KeyRound size={16} aria-hidden />
+            Cambiar contraseña
+          </Link>
           <form action={cerrarSesionAction}>
             <button
               type="submit"

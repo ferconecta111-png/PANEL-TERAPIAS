@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth";
+import { requireSesion } from "@/lib/auth";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -47,7 +47,7 @@ export default async function AnaliticaPage({
 }: {
   searchParams: Promise<{ sitio?: string }>;
 }) {
-  await requireAdmin();
+  const sesion = await requireSesion();
   const supabase = await createSupabaseServer();
   // eventos_pagina no tiene policy de RLS para authenticated a propósito
   // (ver comentario en la migración 0002) — se lee siempre con el cliente
@@ -58,13 +58,36 @@ export default async function AnaliticaPage({
 
   const desde = new Date(Date.now() - DIAS_VENTANA * 24 * 60 * 60 * 1000).toISOString();
 
-  const { data: sitiosData } = await admin
-    .from("eventos_pagina")
-    .select("sitio_slug")
-    .gte("created_at", desde)
-    .returns<{ sitio_slug: string }[]>();
-  const sitiosDisponibles = [...new Set((sitiosData ?? []).map(s => s.sitio_slug))].sort();
-  const sitio = sitioParam && sitiosDisponibles.includes(sitioParam) ? sitioParam : sitiosDisponibles[0];
+  let sitiosDisponibles: string[] = [];
+  let sitio: string | undefined;
+
+  if (sesion.role === "admin") {
+    const { data: sitiosData } = await admin
+      .from("eventos_pagina")
+      .select("sitio_slug")
+      .gte("created_at", desde)
+      .returns<{ sitio_slug: string }[]>();
+    sitiosDisponibles = [...new Set((sitiosData ?? []).map(s => s.sitio_slug))].sort();
+    sitio = sitioParam && sitiosDisponibles.includes(sitioParam) ? sitioParam : sitiosDisponibles[0];
+  } else {
+    // Una terapeuta solo ve SU propio sitio — nunca confiar en ?sitio= de la
+    // URL para esto (sería fácil de manipular para ver el de la otra).
+    if (!sesion.terapeutaId) {
+      return (
+        <div>
+          <h1 className="font-display mb-2 text-2xl font-semibold text-[var(--text)]">Analítica</h1>
+          <p className="text-[var(--text-dim)]">Tu cuenta todavía no está vinculada a un perfil de terapeuta.</p>
+        </div>
+      );
+    }
+    const { data: propio } = await admin
+      .from("terapeutas")
+      .select("slug")
+      .eq("id", sesion.terapeutaId)
+      .maybeSingle<{ slug: string | null }>();
+    sitio = propio?.slug ?? undefined;
+    sitiosDisponibles = sitio ? [sitio] : [];
+  }
 
   if (!sitio) {
     return (

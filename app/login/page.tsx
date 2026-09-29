@@ -1,18 +1,26 @@
 "use client";
 
+import { useState } from "react";
 import { useActionState } from "react";
 import { iniciarSesionAction } from "./actions";
 import { ESTADO_INICIAL } from "./types";
+import FormularioOlvide from "./FormularioOlvide";
 
 export default function LoginPage() {
   const [estado, accion, pendiente] = useActionState(iniciarSesionAction, ESTADO_INICIAL);
+  const [olvide, setOlvide] = useState(false);
 
   return (
     <main className="flex min-h-screen items-center justify-center px-4">
       <div className="card w-full max-w-sm p-8">
         <h1 className="font-display mb-1 text-2xl font-semibold text-[var(--text)]">Panel de Terapeutas</h1>
-        <p className="mb-6 text-sm text-[var(--text-dim)]">Inicia sesión para continuar.</p>
+        <p className="mb-6 text-sm text-[var(--text-dim)]">
+          {olvide ? "Te enviamos un link para poner una contraseña nueva." : "Inicia sesión para continuar."}
+        </p>
 
+        {olvide ? (
+          <FormularioOlvide onVolver={() => setOlvide(false)} />
+        ) : (
         <form action={accion} className="flex flex-col gap-4">
           <div>
             <label htmlFor="email" className="mb-1 block text-sm font-medium text-[var(--text)]">
@@ -52,7 +60,15 @@ export default function LoginPage() {
           <button type="submit" disabled={pendiente} className="btn-accent mt-2 w-full disabled:opacity-60">
             {pendiente ? "Entrando..." : "Iniciar sesión"}
           </button>
+          <button
+            type="button"
+            onClick={() => setOlvide(true)}
+            className="text-sm font-medium text-[var(--text-dim)] hover:text-[var(--text)]"
+          >
+            ¿Olvidaste tu contraseña?
+          </button>
         </form>
+        )}
       </div>
     </main>
   );
