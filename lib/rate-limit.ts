@@ -12,12 +12,13 @@ const LIMITES: Record<RateLimitScope, number> = {
   track: 60,
   "bold-link": 5,
   "paypal-link": 5,
+  "solicitud-cita": 5,
 };
 const MAX_BUCKETS = 10_000;
 
 const buckets = new Map<string, readonly number[]>();
 
-export type RateLimitScope = "track" | "bold-link" | "paypal-link";
+export type RateLimitScope = "track" | "bold-link" | "paypal-link" | "solicitud-cita";
 
 export interface RateLimitResult {
   allowed: boolean;

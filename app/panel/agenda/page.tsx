@@ -2,6 +2,14 @@ import { requireSesion } from "@/lib/auth";
 import { createSupabaseServer } from "@/lib/supabase/server";
 import FormularioCita from "./FormularioCita";
 import ListaCitas from "./ListaCitas";
+import SolicitudesPendientes, { type SolicitudPendiente } from "./SolicitudesPendientes";
+
+function fmtFechaHoraBogota(iso: string): string {
+  return new Intl.DateTimeFormat("es-CO", {
+    weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", hour12: true,
+    timeZone: "America/Bogota",
+  }).format(new Date(iso));
+}
 
 /** Aislada del render para que el linter de pureza de componentes no la marque. */
 function desdeAyerIso(): string {
@@ -34,6 +42,24 @@ export default async function AgendaPage() {
   const { data } = await query.returns<FilaCita[]>();
   const citas = data ?? [];
 
+  let solicitudesQuery = supabase
+    .from("solicitudes_cita")
+    .select("id, start_at, pacientes(nombre), terapeutas(nombre)")
+    .eq("estado", "pendiente")
+    .order("start_at", { ascending: true });
+  if (sesion.role !== "admin" && sesion.terapeutaId) {
+    solicitudesQuery = solicitudesQuery.eq("terapeuta_id", sesion.terapeutaId);
+  }
+  const { data: solicitudesData } = await solicitudesQuery.returns<
+    { id: string; start_at: string; pacientes: { nombre: string } | null; terapeutas: { nombre: string } | null }[]
+  >();
+  const solicitudesPendientes: SolicitudPendiente[] = (solicitudesData ?? []).map(s => ({
+    id: s.id,
+    fechaHora: fmtFechaHoraBogota(s.start_at),
+    pacienteNombre: s.pacientes?.nombre ?? "—",
+    terapeutaNombre: s.terapeutas?.nombre ?? "—",
+  }));
+
   let opciones: { pacientes: { id: string; nombre: string }[]; terapeutas: { id: string; nombre: string }[] } = {
     pacientes: [],
     terapeutas: [],
@@ -51,6 +77,8 @@ export default async function AgendaPage() {
       <h1 className="font-display mb-6 text-2xl font-semibold text-[var(--text)]">
         {sesion.role === "admin" ? "Agenda" : "Mi agenda"}
       </h1>
+
+      <SolicitudesPendientes solicitudes={solicitudesPendientes} mostrarTerapeuta={sesion.role === "admin"} />
 
       <div className="mb-8 card p-5">
         <h2 className="mb-3 text-base font-semibold text-[var(--text)]">Agendar cita</h2>

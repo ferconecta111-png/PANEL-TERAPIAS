@@ -4,6 +4,7 @@ import {
   Users,
   Contact,
   CalendarDays,
+  Clock,
   Wallet,
   LifeBuoy,
   BarChart3,
@@ -21,6 +22,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     { href: "/panel/terapeutas", label: "Terapeutas", icon: Users },
     { href: "/panel/pacientes", label: "Leads", icon: Contact },
     { href: "/panel/agenda", label: "Agenda", icon: CalendarDays },
+    { href: "/panel/horario", label: "Horario", icon: Clock },
     { href: "/panel/ventas", label: "Ventas", icon: Wallet },
     { href: "/panel/soporte", label: "Soporte", icon: LifeBuoy },
     { href: "/panel/analitica", label: "Analítica", icon: BarChart3 },
@@ -29,6 +31,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     { href: "/panel", label: "Inicio", icon: Home },
     { href: "/panel/pacientes", label: "Mis leads", icon: Contact },
     { href: "/panel/agenda", label: "Mi agenda", icon: CalendarDays },
+    { href: "/panel/horario", label: "Mi horario", icon: Clock },
     { href: "/panel/analitica", label: "Mi analítica", icon: BarChart3 },
   ];
   const links = sesion.role === "admin" ? linksAdmin : linksTerapeuta;
