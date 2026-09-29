@@ -28,6 +28,8 @@ export default function CalendarioMes({
   onElegir,
   marca,
 }: {
+  /** Días con horario cargado ese día de la semana — pueden estar totalmente
+   *  ocupados igual; eso se ve al entrar al día, no aquí. */
   fechasDisponibles: string[];
   fechaElegida: string | null;
   onElegir: (fecha: string) => void;
@@ -79,6 +81,7 @@ export default function CalendarioMes({
               type="button"
               disabled={!disponible}
               onClick={() => onElegir(iso)}
+              className={disponible ? "agendar-dia" : undefined}
               style={{
                 aspectRatio: "1 / 1",
                 borderRadius: 12,
@@ -88,6 +91,7 @@ export default function CalendarioMes({
                 fontWeight: disponible ? 700 : 500,
                 fontSize: 14,
                 cursor: disponible ? "pointer" : "default",
+                transition: "transform 0.12s, box-shadow 0.12s",
               }}
             >
               {dia.getUTCDate()}
@@ -95,6 +99,9 @@ export default function CalendarioMes({
           );
         })}
       </div>
+      <style>{`
+        .agendar-dia:hover { transform: translateY(-1px) scale(1.05); box-shadow: 0 4px 10px -4px rgba(0,0,0,0.25); }
+      `}</style>
     </div>
   );
 }

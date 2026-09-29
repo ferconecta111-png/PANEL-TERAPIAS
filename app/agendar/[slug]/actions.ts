@@ -3,7 +3,7 @@
 import { headers } from "next/headers";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { huecosDisponibles, localAUtc, DURACION_MIN } from "@/lib/agendamiento/disponibilidad";
+import { huecosDisponibles, slotsLibresDe, localAUtc, DURACION_MIN } from "@/lib/agendamiento/disponibilidad";
 import type { EstadoSolicitudCita } from "./types";
 
 export async function solicitarCitaAction(_prev: EstadoSolicitudCita, formData: FormData): Promise<EstadoSolicitudCita> {
@@ -35,7 +35,7 @@ export async function solicitarCitaAction(_prev: EstadoSolicitudCita, formData: 
   // alguien podria mandar un POST directo con un horario fuera de su agenda.
   const huecos = await huecosDisponibles(terapeuta.id);
   const diaValido = huecos.find(h => h.fecha === fecha);
-  if (!diaValido || !diaValido.slots.includes(hora)) {
+  if (!slotsLibresDe(diaValido).includes(hora)) {
     return { ok: false, error: "Ese horario ya no está disponible. Elige otro de la lista." };
   }
 

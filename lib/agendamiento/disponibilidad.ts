@@ -65,15 +65,27 @@ function slotsDelDia(horaInicio: string, horaFin: string): string[] {
   return slots;
 }
 
+export interface SlotDia {
+  hora: string;
+  libre: boolean;
+}
+
 export interface HuecosPorDia {
   fecha: string;
-  slots: string[];
+  slots: SlotDia[];
+}
+
+/** Solo las horas libres de un día — lo único que de verdad se puede pedir. */
+export function slotsLibresDe(dia: HuecosPorDia | undefined): string[] {
+  return (dia?.slots ?? []).filter(s => s.libre).map(s => s.hora);
 }
 
 /**
- * Huecos reales de los proximos 14 dias: el horario semanal de la terapeuta
- * menos lo que ya esta ocupado (citas confirmadas + solicitudes pendientes
- * de OTRO paciente) y menos las horas que ya pasaron hoy.
+ * Agenda completa de los proximos 14 dias: TODAS las horas del horario
+ * semanal de la terapeuta, marcando cada una libre u ocupada (por una cita
+ * confirmada o una solicitud pendiente de otro paciente) — no se ocultan las
+ * ocupadas, para que quien agenda vea el panorama real del dia, igual que en
+ * el panel de citas.
  */
 export async function huecosDisponibles(terapeutaId: string): Promise<HuecosPorDia[]> {
   const admin = createAdminClient();
@@ -104,17 +116,17 @@ export async function huecosDisponibles(terapeutaId: string): Promise<HuecosPorD
     const horariosDelDia = horariosPorDia.get(dia) ?? [];
     if (horariosDelDia.length === 0) continue;
 
-    const slotsLibres: string[] = [];
+    const slots: SlotDia[] = [];
     for (const h of horariosDelDia) {
       for (const hhmm of slotsDelDia(h.hora_inicio, h.hora_fin)) {
         const inicio = localAUtc(fecha, hhmm).getTime();
         const fin = inicio + DURACION_MIN * 60_000;
         if (inicio <= ahora) continue; // ya paso o es muy pronto
         const chocaConAlgo = ocupados.some(o => inicio < o.fin && fin > o.inicio);
-        if (!chocaConAlgo) slotsLibres.push(hhmm);
+        slots.push({ hora: hhmm, libre: !chocaConAlgo });
       }
     }
-    if (slotsLibres.length > 0) resultado.push({ fecha, slots: slotsLibres.sort() });
+    if (slots.length > 0) resultado.push({ fecha, slots: slots.sort((a, b) => a.hora.localeCompare(b.hora)) });
   }
   return resultado;
 }

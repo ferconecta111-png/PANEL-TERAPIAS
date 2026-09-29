@@ -61,26 +61,47 @@ export default function FormularioAgendar({
 
       {fechaElegida && (
         <div>
-          <p style={{ fontSize: 13, fontWeight: 700, color: marca.text, margin: "12px 0 8px" }}>
-            {fmtFechaLarga(fechaElegida)} — elige una hora
-          </p>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8, margin: "12px 0 10px" }}>
+            <p style={{ fontSize: 13, fontWeight: 700, color: marca.text, margin: 0 }}>
+              {fmtFechaLarga(fechaElegida)}
+            </p>
+            <div style={{ display: "flex", gap: 12, fontSize: 11.5, color: marca.textFaint }}>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 9, height: 9, borderRadius: "50%", background: marca.accentTint, border: `1.5px solid ${marca.accent}`, display: "inline-block" }} />
+                Disponible
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <span style={{ width: 9, height: 9, borderRadius: "50%", background: "#e4e4e4", display: "inline-block" }} />
+                Ocupado
+              </span>
+            </div>
+          </div>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-            {slotsDelDia.map(hora => (
+            {slotsDelDia.map(s => (
               <button
-                key={hora}
+                key={s.hora}
                 type="button"
-                onClick={() => setHoraElegida(hora)}
+                disabled={!s.libre}
+                onClick={() => s.libre && setHoraElegida(s.hora)}
+                title={s.libre ? undefined : "Ese horario ya está ocupado"}
+                className="agendar-slot"
                 style={{
-                  padding: "9px 16px", borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: "pointer",
-                  border: `1.5px solid ${horaElegida === hora ? marca.accent : marca.border}`,
-                  background: horaElegida === hora ? marca.accent : "transparent",
-                  color: horaElegida === hora ? "#fff" : marca.text,
+                  padding: "9px 16px", borderRadius: 999, fontSize: 13.5, fontWeight: 600,
+                  cursor: s.libre ? "pointer" : "not-allowed",
+                  border: `1.5px solid ${horaElegida === s.hora ? marca.accent : s.libre ? marca.border : "#e4e4e4"}`,
+                  background: horaElegida === s.hora ? marca.accent : s.libre ? "transparent" : "#f2f2f2",
+                  color: horaElegida === s.hora ? "#fff" : s.libre ? marca.text : "#a8a8a8",
+                  textDecoration: s.libre ? "none" : "line-through",
                 }}
               >
-                {hora}
+                {s.hora}
               </button>
             ))}
           </div>
+          <style>{`
+            .agendar-slot:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 4px 10px -4px rgba(0,0,0,0.25); }
+            .agendar-slot { transition: transform 0.12s, box-shadow 0.12s; }
+          `}</style>
         </div>
       )}
 
