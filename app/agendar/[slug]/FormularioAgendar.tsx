@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { solicitarCitaAction } from "./actions";
 import { ESTADO_SOLICITUD_INICIAL } from "./types";
+import CalendarioMes from "./CalendarioMes";
 import type { HuecosPorDia } from "@/lib/agendamiento/disponibilidad";
 import type { MarcaTerapeuta } from "@/lib/agendamiento/marca";
 
@@ -50,28 +51,19 @@ export default function FormularioAgendar({
 
       <div>
         <p style={{ fontSize: 13, fontWeight: 700, color: marca.text, margin: "0 0 8px" }}>Elige un día</p>
-        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-          {huecos.map(h => (
-            <button
-              key={h.fecha}
-              type="button"
-              onClick={() => { setFechaElegida(h.fecha); setHoraElegida(null); }}
-              style={{
-                padding: "9px 14px", borderRadius: 999, fontSize: 13.5, fontWeight: 600, cursor: "pointer",
-                border: `1.5px solid ${fechaElegida === h.fecha ? marca.accent : marca.border}`,
-                background: fechaElegida === h.fecha ? marca.accent : "transparent",
-                color: fechaElegida === h.fecha ? "#fff" : marca.text,
-              }}
-            >
-              {fmtFechaLarga(h.fecha)}
-            </button>
-          ))}
-        </div>
+        <CalendarioMes
+          fechasDisponibles={huecos.map(h => h.fecha)}
+          fechaElegida={fechaElegida}
+          onElegir={fecha => { setFechaElegida(fecha); setHoraElegida(null); }}
+          marca={marca}
+        />
       </div>
 
       {fechaElegida && (
         <div>
-          <p style={{ fontSize: 13, fontWeight: 700, color: marca.text, margin: "0 0 8px" }}>Elige una hora</p>
+          <p style={{ fontSize: 13, fontWeight: 700, color: marca.text, margin: "12px 0 8px" }}>
+            {fmtFechaLarga(fechaElegida)} — elige una hora
+          </p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             {slotsDelDia.map(hora => (
               <button
