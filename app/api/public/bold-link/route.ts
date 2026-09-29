@@ -59,6 +59,13 @@ const CATALOGO: Record<string, ProductoPublico> = {
     descripcion: "Paquete de 3 sesiones de sexologia - Adriana Vargas",
     callbackUrl: "https://ferconecta111-png.github.io/PAGINA-WEB-ADRIANA-VARGAS/gracias.html",
   },
+  adriana_union_almas: {
+    slug: "adriana",
+    montoUnidades: 280,
+    moneda: "USD",
+    descripcion: "Union de Almas - Boda Holistica - Adriana Vargas",
+    callbackUrl: "https://ferconecta111-png.github.io/PAGINA-WEB-ADRIANA-VARGAS/gracias.html",
+  },
 };
 
 function conCors(res: NextResponse): NextResponse {
