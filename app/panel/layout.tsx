@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { requireSesion } from "@/lib/auth";
 import { cerrarSesionAction } from "@/app/login/actions";
+import BottomNav from "./BottomNav";
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const sesion = await requireSesion();
@@ -38,7 +39,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-screen">
-      <aside className="neu flex w-64 shrink-0 flex-col justify-between p-5">
+      <aside className="neu hidden w-64 shrink-0 flex-col justify-between p-5 md:flex">
         <div>
           <h2 className="t-subtitle mb-6">Panel de Terapeutas</h2>
           <nav className="flex flex-col gap-1">
@@ -77,7 +78,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
           </form>
         </div>
       </aside>
-      <main className="flex-1 p-6 md:p-8">{children}</main>
+      <main className="flex-1 p-6 pb-24 md:p-8 md:pb-8">{children}</main>
+      <BottomNav role={sesion.role} email={sesion.email} />
     </div>
   );
 }
