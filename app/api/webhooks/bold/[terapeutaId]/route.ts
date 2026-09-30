@@ -1,7 +1,8 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { NextResponse } from "next/server";
+import { NextResponse, after } from "next/server";
 import type { NextRequest } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { enviarPurchaseCapi } from "@/lib/meta-capi";
 
 export const runtime = "nodejs";
 
@@ -31,9 +32,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ter
   const admin = createAdminClient();
   const { data: terapeuta } = await admin
     .from("terapeutas")
-    .select("id, bold_webhook_secret")
+    .select("id, bold_webhook_secret, meta_pixel_id, meta_capi_token")
     .eq("id", terapeutaId)
-    .maybeSingle<{ id: string; bold_webhook_secret: string | null }>();
+    .maybeSingle<{ id: string; bold_webhook_secret: string | null; meta_pixel_id: string | null; meta_capi_token: string | null }>();
 
   if (!terapeuta?.bold_webhook_secret) {
     console.error("[webhook/bold] terapeuta_sin_secreto", { terapeutaId });
@@ -91,10 +92,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ter
 
   const { data: solicitud } = await admin
     .from("solicitudes_pago")
-    .select("paciente_id, producto")
+    .select("paciente_id, producto, comprador_telefono, meta_fbp, meta_fbc")
     .eq("referencia", referencia)
     .eq("terapeuta_id", terapeutaId)
-    .maybeSingle<{ paciente_id: string | null; producto: string | null }>();
+    .maybeSingle<{
+      paciente_id: string | null;
+      producto: string | null;
+      comprador_telefono: string | null;
+      meta_fbp: string | null;
+      meta_fbc: string | null;
+    }>();
 
   // El nombre exacto del campo de telefono en el payload real de Bold no
   // esta confirmado todavia (nunca hemos recibido uno) — se prueban los
@@ -119,6 +126,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ ter
   if (error) {
     console.error("[webhook/bold] insert_fallido", { terapeutaId, code: error.code });
     return NextResponse.json({ error: "No se pudo guardar" }, { status: 500 });
+  }
+
+  // Evento Purchase a Meta (Pixel + API de Conversiones) — solo si esta
+  // terapeuta ya tiene su pixel/token configurado, y solo para pagos
+  // aprobados. Va en after() para no demorar la respuesta a Bold (exige
+  // <2s) ni arriesgar el registro del pago si Meta responde lento o falla.
+  if (estado === "aprobado" && terapeuta.meta_pixel_id && terapeuta.meta_capi_token) {
+    const pixelId = terapeuta.meta_pixel_id;
+    const capiToken = terapeuta.meta_capi_token;
+    const montoUnidades = datos?.amount?.total ?? 0;
+    const moneda = datos?.amount?.currency ?? "USD";
+    const email = datos?.payer_email ?? null;
+    const telefonoCapi = solicitud?.comprador_telefono ?? telefono;
+    const fbp = solicitud?.meta_fbp ?? null;
+    const fbc = solicitud?.meta_fbc ?? null;
+    after(async () => {
+      const resultado = await enviarPurchaseCapi({
+        pixelId, capiToken, montoUnidades, moneda, email, telefono: telefonoCapi, fbp, fbc,
+      });
+      if (!resultado.ok) console.error("[webhook/bold] capi_fallido", { terapeutaId, error: resultado.error });
+    });
   }
 
   return NextResponse.json({ ok: true });

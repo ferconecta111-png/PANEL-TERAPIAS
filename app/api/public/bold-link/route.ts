@@ -91,11 +91,14 @@ export async function POST(req: NextRequest) {
     return conCors(NextResponse.json({ error: "JSON inválido" }, { status: 400 }));
   }
 
-  const { producto, nombre, telefono, pais } = body as {
+  const { producto, nombre, telefono, pais, fbp, fbc, eventId } = body as {
     producto?: unknown;
     nombre?: unknown;
     telefono?: unknown;
     pais?: unknown;
+    fbp?: unknown;
+    fbc?: unknown;
+    eventId?: unknown;
   };
   const config = typeof producto === "string" ? CATALOGO[producto] : undefined;
   if (!config) return conCors(NextResponse.json({ error: "Producto desconocido" }, { status: 422 }));
@@ -175,6 +178,9 @@ export async function POST(req: NextRequest) {
       comprador_telefono: compradorTelefono,
       comprador_pais: compradorPais,
       pasarela: "bold",
+      meta_fbp: typeof fbp === "string" ? fbp.slice(0, 200) : null,
+      meta_fbc: typeof fbc === "string" ? fbc.slice(0, 200) : null,
+      meta_event_id: typeof eventId === "string" ? eventId.slice(0, 100) : null,
     });
     if (error) console.error("[bold-link] solicitud_pago_no_registrada", { referencia, code: error.code });
   }
