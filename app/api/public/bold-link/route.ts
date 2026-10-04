@@ -66,6 +66,20 @@ const CATALOGO: Record<string, ProductoPublico> = {
     descripcion: "Union de Almas - Boda Holistica - Adriana Vargas",
     callbackUrl: "https://ferconecta111-png.github.io/PAGINA-WEB-ADRIANA-VARGAS/gracias.html",
   },
+  adriana_paquete_x3_taller: {
+    slug: "adriana",
+    montoUnidades: 153,
+    moneda: "USD",
+    descripcion: "Paquete de 3 sesiones - oferta exclusiva asistentes del taller - Adriana Vargas",
+    callbackUrl: "https://ferconecta111-png.github.io/PAGINA-WEB-ADRIANA-VARGAS/gracias.html",
+  },
+  eli_curso_heridas: {
+    slug: "elizabeth",
+    montoUnidades: 197,
+    moneda: "USD",
+    descripcion: "Curso Sanando Heridas de la Infancia - Elizabet Garcia Duque",
+    callbackUrl: "https://heridas-de-infancia.vercel.app/gracias",
+  },
 };
 
 function conCors(res: NextResponse): NextResponse {
