@@ -75,14 +75,14 @@ const CATALOGO: Record<string, ProductoPublico> = {
   },
   adriana_taller_preventa: {
     slug: "adriana",
-    montoUnidades: 15,
+    montoUnidades: 45,
     moneda: "USD",
     descripcion: "Taller Descubre el PLACER que te habita - precio preventa - Adriana Vargas",
     callbackUrl: "https://ferconecta111-png.github.io/PAGINA-WEB-ADRIANA-VARGAS/gracias.html",
   },
   adriana_taller_normal: {
     slug: "adriana",
-    montoUnidades: 27,
+    montoUnidades: 97,
     moneda: "USD",
     descripcion: "Taller Descubre el PLACER que te habita - precio regular - Adriana Vargas",
     callbackUrl: "https://ferconecta111-png.github.io/PAGINA-WEB-ADRIANA-VARGAS/gracias.html",
