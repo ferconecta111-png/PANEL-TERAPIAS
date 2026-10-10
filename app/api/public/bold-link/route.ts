@@ -116,7 +116,7 @@ interface CodigoDescuento {
   montoUnidades: number; // precio final con el descuento ya aplicado
 }
 const CODIGOS_DESCUENTO: Record<string, CodigoDescuento> = {
-  CONEXION: { producto: "fernanda_pagina_terapeutas", montoUnidades: 500 },
+  HOY: { producto: "fernanda_pagina_terapeutas", montoUnidades: 500 },
 };
 
 function conCors(res: NextResponse): NextResponse {
