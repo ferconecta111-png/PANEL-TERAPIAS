@@ -103,6 +103,24 @@ const CATALOGO: Record<string, ProductoPublico> = {
   },
 };
 
+// Códigos de descuento por referido (pedido de Fernanda 10-oct-2026): la
+// compradora escribe el código ella misma al pagar y el precio baja solo,
+// sin que Fernanda tenga que activarlo a mano por WhatsApp. El monto
+// descontado sigue sin salir nunca del cliente — el código solo es una
+// llave que el servidor busca aquí; si no existe o no aplica a ese
+// producto, se rechaza con 422 en vez de cobrar el precio lleno en
+// silencio (para no dar la sensación de que el código "no sirvió para
+// nada"). Para agregar un código nuevo, solo se agrega una línea aquí.
+interface CodigoDescuento {
+  producto: string; // debe existir como key en CATALOGO
+  montoUnidades: number; // precio final con el descuento ya aplicado
+}
+const CODIGOS_DESCUENTO: Record<string, CodigoDescuento> = {
+  REFERIDA: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
+  ELI: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
+  ADRIANA: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
+};
+
 function conCors(res: NextResponse): NextResponse {
   res.headers.set("Access-Control-Allow-Origin", "*");
   res.headers.set("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -126,17 +144,31 @@ export async function POST(req: NextRequest) {
     return conCors(NextResponse.json({ error: "JSON inválido" }, { status: 400 }));
   }
 
-  const { producto, nombre, telefono, pais, fbp, fbc, eventId } = body as {
+  const { producto, nombre, telefono, pais, codigo, fbp, fbc, eventId } = body as {
     producto?: unknown;
     nombre?: unknown;
     telefono?: unknown;
     pais?: unknown;
+    codigo?: unknown;
     fbp?: unknown;
     fbc?: unknown;
     eventId?: unknown;
   };
   const config = typeof producto === "string" ? CATALOGO[producto] : undefined;
   if (!config) return conCors(NextResponse.json({ error: "Producto desconocido" }, { status: 422 }));
+
+  let montoFinal = config.montoUnidades;
+  let descripcionFinal = config.descripcion;
+  const codigoTexto = typeof codigo === "string" ? codigo.trim().toUpperCase() : "";
+  if (codigoTexto) {
+    const descuento = CODIGOS_DESCUENTO[codigoTexto];
+    if (!descuento || descuento.producto !== producto) {
+      return conCors(NextResponse.json({ error: "Código no válido" }, { status: 422 }));
+    }
+    montoFinal = descuento.montoUnidades;
+    descripcionFinal = `${config.descripcion} (código ${codigoTexto})`;
+  }
+
   // Pedido de Fernanda (22-sep-2026): nombre y teléfono son obligatorios —
   // se piden ANTES de mandar a pagar, para tener el contacto pase lo que
   // pase con el pago (Bold no lo garantiza, PayPal tampoco siempre).
@@ -176,9 +208,9 @@ export async function POST(req: NextRequest) {
 
   const resultado = await crearLinkDePago({
     identityKey,
-    montoUnidades: config.montoUnidades,
+    montoUnidades: montoFinal,
     moneda: config.moneda,
-    descripcion: config.descripcion,
+    descripcion: descripcionFinal,
     referencia,
     callbackUrl: config.callbackUrl,
   });
@@ -204,8 +236,8 @@ export async function POST(req: NextRequest) {
     const { error } = await admin.from("solicitudes_pago").insert({
       referencia,
       terapeuta_id: terapeuta.id,
-      producto: config.descripcion,
-      monto: config.montoUnidades,
+      producto: descripcionFinal,
+      monto: montoFinal,
       moneda: config.moneda,
       bold_payment_link_id: resultado.paymentLinkId ?? null,
       url_pago: resultado.url,
