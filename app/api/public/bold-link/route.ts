@@ -116,7 +116,7 @@ interface CodigoDescuento {
   montoUnidades: number; // precio final con el descuento ya aplicado
 }
 const CODIGOS_DESCUENTO: Record<string, CodigoDescuento> = {
-  REFERIDA: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
+  CONEXION: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
   ELI: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
   ADRIANA: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
 };
