@@ -96,8 +96,8 @@ const CATALOGO: Record<string, ProductoPublico> = {
   },
   fernanda_pagina_terapeutas: {
     slug: "fernanda",
-    montoUnidades: 1800000,
-    moneda: "COP",
+    montoUnidades: 560,
+    moneda: "USD",
     descripcion: "Pagina profesional con pasarela de pago para terapeutas - Fernanda Conde",
     callbackUrl: "https://ferconecta111-png.github.io/sistema33/gracias-terapeutas.html",
   },
@@ -116,9 +116,7 @@ interface CodigoDescuento {
   montoUnidades: number; // precio final con el descuento ya aplicado
 }
 const CODIGOS_DESCUENTO: Record<string, CodigoDescuento> = {
-  CONEXION: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
-  ELI: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
-  ADRIANA: { producto: "fernanda_pagina_terapeutas", montoUnidades: 1600000 },
+  CONEXION: { producto: "fernanda_pagina_terapeutas", montoUnidades: 500 },
 };
 
 function conCors(res: NextResponse): NextResponse {
