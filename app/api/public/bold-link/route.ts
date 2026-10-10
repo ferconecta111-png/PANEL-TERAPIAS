@@ -94,6 +94,13 @@ const CATALOGO: Record<string, ProductoPublico> = {
     descripcion: "Curso Sanando Heridas de la Infancia - Elizabet Garcia Duque",
     callbackUrl: "https://heridas-de-infancia.vercel.app/gracias",
   },
+  fernanda_pagina_terapeutas: {
+    slug: "fernanda",
+    montoUnidades: 1800000,
+    moneda: "COP",
+    descripcion: "Pagina profesional con pasarela de pago para terapeutas - Fernanda Conde",
+    callbackUrl: "https://ferconecta111-png.github.io/sistema33/gracias-terapeutas.html",
+  },
 };
 
 function conCors(res: NextResponse): NextResponse {
