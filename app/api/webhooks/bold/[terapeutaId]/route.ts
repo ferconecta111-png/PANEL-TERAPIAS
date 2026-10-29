@@ -17,8 +17,17 @@ export const runtime = "nodejs";
  * Doc: https://developers.bold.co/webhook
  */
 
+/**
+ * Hallazgo real 30-sep-2026: el algoritmo real de Bold (confirmado contra su
+ * documentación) es HMAC-SHA256, en HEX, sobre el cuerpo YA CONVERTIDO A
+ * BASE64 — no sobre el cuerpo crudo, y no en base64 como se tenía antes. Ese
+ * desajuste hacía fallar la firma en casi todos los avisos reales (por eso
+ * Elizabeth y Adriana tenían ventas reales en Bold que nunca llegaban a
+ * `pagos_bold`).
+ */
 function firmaValida(cuerpoCrudo: string, firmaRecibida: string, secreto: string): boolean {
-  const esperada = createHmac("sha256", secreto).update(cuerpoCrudo).digest("base64");
+  const cuerpoBase64 = Buffer.from(cuerpoCrudo, "utf8").toString("base64");
+  const esperada = createHmac("sha256", secreto).update(cuerpoBase64).digest("hex");
   const a = Buffer.from(firmaRecibida);
   const b = Buffer.from(esperada);
   return a.length === b.length && timingSafeEqual(a, b);
